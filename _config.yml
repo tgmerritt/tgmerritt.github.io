@@ -1,0 +1,12 @@
+# Site settings
+title: Strive for Excellent Habits
+email: tgmerritt@gmail.com
+description: > # this means to ignore newlines until "baseurl:"
+  A software writer's blog about all the scary things I can never remember, and how to make those things easier to recall by writing them down.  I am not an engineer.  I write software, rough at first, but methodically improved until I'm not as unhappy with it as I started.
+baseurl: "" # the subpath of your site, e.g. /blog/
+url: "http://tgmerritt.github.io" # the base hostname & protocol for your site
+twitter_username: tm3rritt
+github_username:  tgmerritt
+highlighter: pygments
+# Build settings
+markdown: kramdown
