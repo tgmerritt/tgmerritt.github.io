@@ -1,3 +1,10 @@
+---
+layout: post
+title:  "Creating a new Rails4.2 app with PSQL and Devise"
+date:   2015-05-21 10:33:45
+categories: jekyll update
+---
+
 This is a really quick note - for preservation, for a reminder - about how you can start "losing" data with MongoDB.
 
 Imagine that you have a Rails application, and one of your Index actions is to display in table-layout information about documents in a certain collection.
