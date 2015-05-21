@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Creating a new Rails4.2 app with PSQL and Devise"
+title:  "Losing Data with MongoDB"
 date:   2015-05-21 10:33:45
 categories: jekyll update
 ---
