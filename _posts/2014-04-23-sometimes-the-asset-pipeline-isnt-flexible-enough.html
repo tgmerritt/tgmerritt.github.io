@@ -1,0 +1,48 @@
+---
+layout: post
+title: Sometimes the asset pipeline isn't flexible enough
+date: 2014-04-23 20:19:41.000000000 -05:00
+categories: []
+tags:
+- asset pipeline
+- CDN
+- rails
+- rails3
+- ruby assets
+- ruby-on-rails
+status: publish
+type: post
+published: true
+excerpt: !ruby/object:Hpricot::Doc
+  options: {}
+---
+<p><a href="http://app.konisur.com">In my latest application</a>, I wanted to display full-width and full-height background images randomly from some web source.</p>
+<p>I couldn't find any documentation about how to call a background image from a URL - and it's true that these things change over time and one day my application my hit a 404.  So I ended up putting 9 images that I liked (and own the rights to) in my assets/images folder, precompiling and pushing the application live.</p>
+<p>The code for the randomization is like this:</p>
+<pre>&lt;style&gt;<br /> .main_app {<br /> font-size: 20px;<br /> color: #fff;<br /> background: url(&lt;%= randomized_background_image %&gt;) no-repeat center center fixed;<br /> -webkit-background-size: cover;<br /> -moz-background-size: cover;<br /> -o-background-size: cover;<br /> background-size: cover;<br /> }<br />&lt;/style&gt;</pre>
+<p>I put this in my layout file - application.html.erb.  Normally you wouldn't include CSS definitions like this directly in the html file - you put them in a css/scss/sass file.</p>
+<p>But here we have a learning opportunity - we want to call a helper method that we defined called 'randomized_background_image' and we need to call it using ERB syntax so that it will be interpreted.  </p>
+<p>I couldn't think of a better way to do it directly in the CSS file (and I found most of what I needed on Stack Overflow, so I left it alone).  I have a definition inside my primary CSS file in case this override ever chokes, but this helper method goes to Application Helper and is defined like so:</p>
+<pre>module ApplicationHelper<br /> def randomized_background_image<br /> images = [<br /> ("/assets/bg0.jpg"),<br /> ("/assets/bg1.jpg"),<br /> ("/assets/bg2.jpg"),<br /> ("/assets/bg3.jpg"),<br /> ("/assets/bg4.jpg"),<br /> ("/assets/bg5.jpg"),<br /> ("/assets/bg6.jpg"),<br /> ("/assets/bg7.jpg"),<br /> ("/assets/bg8.jpg")<br /> ]<br /> images[rand(images.size)]<br /> end<br />end</pre>
+<p>Pushing this out - you have a nice random image effect for the background of your site or app.  </p>
+<p>Now there is a problem - which is the namesake of this post - there is no way that I could find to make those assets actually come from my defined asset site.</p>
+<p>I use Amazon CloudFront in most of my projects, and I end up with a convention of:</p>
+<pre>http://cdn0.hostname.com</pre>
+<pre>http://cdn1.hostname.com</pre>
+<pre>http://cdn2.hostname.com</pre>
+<p>And so on through 9.  This allows us to skirt the limitation of a browser only opening a max of two simultaneous connections to a host.  When we want to serve lots of css, js, and image files concurrently (and quickly), we make sure to fake a bunch of random hostnames (which all go back to the same CloudFront URL of course) in order to get those things moving across the inter-tubes.</p>
+<p>So back to our problem - normally from a view you can call:</p>
+<pre>&lt;%= image_tag "bg" %&gt; </pre>
+<p>and rails will automagically figure things out for you - grab the image from either your public/assets directory or from your /assets directory if you have the fallback option enabled (disable it in production please).</p>
+<p>In your CSS files, you might have used something like:</p>
+<pre>background-image: url('image.jpg');</pre>
+<p>In order to serve these assets through the asset pipeline.</p>
+<p>But what if you are in my shoes?  You want to serve the assets through the asset pipeline <em>from a Class</em>?</p>
+<p>The asset helper tags weren't really meant for that.</p>
+<p>I tried solutions like the following:</p>
+<pre class="default prettyprint prettyprinted" style="color:#000000;"><code><span class="typ" style="color:#2b91af;">ActionController</span><span class="pun" style="color:#000000;">::</span><span class="typ" style="color:#2b91af;">Base</span><span class="pun" style="color:#000000;">.</span><span class="pln" style="color:#000000;">helpers</span><span class="pun" style="color:#000000;">.</span><span class="pln" style="color:#000000;">image_path</span><span class="pun" style="color:#000000;">(</span><span class="str" style="color:#800000;">"/assets/bg0.jpg"</span><span class="pun" style="color:#000000;">)<br /></span></code></pre>
+<p class="default prettyprint prettyprinted" style="color:#000000;">Or </p>
+<pre class="default prettyprint prettyprinted"><code><span class="typ" style="color:#2b91af;">ActionController</span><span class="pun">::</span><span class="typ" style="color:#2b91af;">Base</span><span class="pun">.</span><span class="pln">helpers</span><span class="pun">.</span><span class="pln">image_path</span><span class="pun">(</span><span class="str" style="color:#800000;">"bg0.jpg"</span><span class="pun">)</span></code></pre>
+<p class="default prettyprint prettyprinted" style="color:#000000;">And all manner of other trickery to get it working.  Alas - it was not to be.</p>
+<p class="default prettyprint prettyprinted" style="color:#000000;">The final solution I settled on?  Hardcode the damn links to the CDN files.</p>
+<pre class="default prettyprint prettyprinted" style="color:#000000;">module ApplicationHelper<br /> def randomized_background_image<br /> images = [<br /> ("http://cdn0.hostname.com/assets/bg0.jpg"),<br /> ("http://cdn1.hostname.com/assets/bg1.jpg"),<br /> ("http://cdn2.hostname.com/assets/bg2.jpg"),<br /> ("http://cdn3.hostname.com/assets/bg3.jpg"),<br /> ("http://cdn4.hostname.com/assets/bg4.jpg"),<br /> ("http://cdn5.hostname.com/assets/bg5.jpg"),<br /> ("http://cdn6.hostname.com/assets/bg6.jpg"),<br /> ("http://cdn7.hostname.com/assets/bg7.jpg"),<br /> ("http://cdn8.hostname.com/assets/bg8.jpg")<br /> ]<br /> images[rand(images.size)]<br /> end<br />end</pre>

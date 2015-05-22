@@ -1,8 +1,14 @@
 ---
 layout: post
-title:  "Nokogiri and XML"
-date:   2014-01-20 12:13:43
-categories: jekyll update
+title: Nokogiri & XML
+date: 2014-01-30 20:35:47.000000000 -06:00
+categories: []
+tags: []
+status: draft
+type: post
+published: false
+excerpt: !ruby/object:Hpricot::Doc
+  options: {}
 ---
 
 I was presented with the opportunity to integrate [Field Harmony]("http://www.fieldharmony.com") with [Service Bench]("https://www.servicebench.com/site/").  Service Bench is the hub for a lot of large manufacturers to dispatch warranty work orders to qualified servicers all around the US.  It's pretty important that Field Harmony supports their platform, so I set about integrating their API.

@@ -1,0 +1,30 @@
+---
+layout: post
+title: Dealing with Mongo time and Ruby Time
+date: 2014-04-17 14:29:26.000000000 -05:00
+categories: []
+tags: []
+status: publish
+type: post
+published: true
+excerpt: !ruby/object:Hpricot::Doc
+  options: {}
+---
+<p>In my applications I work with time a lot, and it's a pain the way every different language implements time.  There are standards like iso8601, but every language's <em>default</em> seems to be anything other than iso8601.</p>
+<p>The use-case here is when we use mongo_mapper as our ORM for a Rails project.  </p>
+<p>mongo_mapper has this great little plugin "timestamps!" which you can add to any model to get created_at and updated_at keys inserted and updated automatically for every document.  </p>
+<p>timestamps! will insert time in the following format:</p>
+<p>"created_at" : ISODate("2014-04-16T21:45:58.381Z")</p>
+<p>ISO8601!</p>
+<p>However - when we pull it OUT of the database and say something like "user.created_at" we will get :</p>
+<p>2014-04-16 21:45:58 UTC</p>
+<p>UTC...</p>
+<p>It's interpreting the 'Z' at the end of the database value as the timezone, and rendering that timezone accordingly.  </p>
+<p>But!  When we call Time.new we will get something like this :</p>
+<p>2014-04-17 09:02:34 -0500</p>
+<p>Ahh a regular Ruby time object in offset format.  </p>
+<p>So I have three different variations of basically the same thing (not the same time, I'm copying and pasting here different times for examples).  </p>
+<p>And what you want in many cases is some kind of difference for things like "elapsed time" or "days ago" and what-not.  That means converting things.</p>
+<p>In my current project - I'm doing the following:</p>
+<p>&lt;% ca = user.created_at.to_s.gsub(/UTC/,'-0000') %&gt;<br /> &lt;td&gt;&lt;% t = Time.now - Time.parse(ca); t = t/60 %&gt; &lt;%= t.to_i.to_s %&gt; min &lt;/td&gt;</p>
+<p>We change the UTC to the actual offset which is -0000 that gives us a valid string for Time.parse, to convert to a Time object which can be subtracted from another time object, and then we can finally do some simple math to render it in minutes.  </p>

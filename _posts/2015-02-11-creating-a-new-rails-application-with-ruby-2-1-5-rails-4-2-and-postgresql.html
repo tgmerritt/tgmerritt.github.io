@@ -1,0 +1,146 @@
+---
+layout: post
+title: Creating a new Rails Application with Ruby 2.1.5, Rails 4.2, and PostgreSQL
+date: 2015-02-11 16:32:20.000000000 -06:00
+categories: []
+tags: []
+status: publish
+type: post
+published: true
+excerpt: !ruby/object:Hpricot::Doc
+  options: {}
+---
+<p>I hope that someone comes across this post someday and it's useful.  There are many tutorial blogs on how to get Rails setup and running, they're nicely laid out in sections with formatting, images of the console, and thorough explanation.  They are very useful.</p>
+<p>This isn't one of them.</p>
+<p>This is a brain-dump of notes on how I setup an application last night off the cuff with Rails 4.2 and PostgreSQL.</p>
+<p>First thing I did was create a new gemset:</p>
+
+{% highlight ruby %}
+  rvm gemset use rails42
+{% endhighlight %}
+
+<p>If you don't have rvm installed - you can find instructions here: <a title="Install RVM" href="https://rvm.io/rvm/install" target="_blank">Install RVM</a></p>
+<p>A gemset creates a kind of fenced off little world within which you can declare various gems you'd like to use.  It exists to help you create buckets such that you can test the same application on different versions of Ruby with it's dependent gems updated to the proper versions.</p>
+<p>Then I declared I wanted to use Ruby 2.1.5 with this gemset:</p>
+
+{% highlight ruby %}
+  rvm use 2.1.5@rails42
+{% endhighlight %}
+
+<p>If you want to see all the gemsets for a particular version of Ruby (each ruby can have it's own gemsets!) you can run this command:</p>
+
+{% highlight ruby %}
+  T$ rvm gemset list
+
+  gemsets for ruby-2.1.5 (found in /Users/Tyler/.rvm/gems/ruby-2.1.5)
+     (default)
+     global
+  => rails42
+{% endhighlight %}
+
+<p>I didn't have PostgreSQL installed on the laptop I was using - so you do:</p>
+
+{% highlight ruby %}
+  brew install postgresql
+{% endhighlight %}
+
+<p>I've seen people reference `brew install pg` and `brew install postgre` on some blogs - but this is ambiguous:</p>
+
+{% highlight ruby %}
+  brew install pg
+  Error: No available formula for pg 
+  Searching formulae...
+  apg           gpgme          mpg123         pgbadger        pgpool-ii           topgit
+  apgdiff           libbpg          mpg321         pgbouncer        pgrep           virtualpg
+  gnupg           libgpg-error          mpgtx         pgcli            pgrouting
+  gnupg-pkcs11-scd   libjpg          osm2pgrouting     pgdbf            pgtap
+  gnupg2           libpgm          osm2pgsql         pgformatter        pgtune
+  gpg-agent       libwpg          pg_top         pgpdump        rpg
+  Searching taps...
+  homebrew/versions/gnupg21          homebrew/php/phppgadmin            Caskroom/cask/pgadmin3
+  homebrew/php/php54-pdo-pgsql          homebrew/x11/pgplot            Caskroom/cask/pgloader
+  homebrew/php/php55-pdo-pgsql          Caskroom/cask/gpgtools            Caskroom/cask/pgweb
+  homebrew/php/php56-pdo-pgsql          Caskroom/cask/pg-commander
+{% endhighlight %}
+
+<p>So don't do that.  Just spell it out...</p>
+<p>Then you're ready to start a new app.  Go to whatever home folder you start all your applications from (mine is /Users/Tyler) and you can initialize the application like this:</p>
+
+{% highlight ruby %}
+  rails new myapp --database=postgresql --no-ri --no-rdoc
+{% endhighlight %}
+
+<p>This is going to setup the application without all the unnecessary documentation files (which you can find online) and postgresql.</p>
+<p>At this point - instead of copying and pasting parts of the application - if you want to see the sourcecode it's on GitHub at <a href="https://github.com/tgmerritt/loan_co_example" target="_blank">https://github.com/tgmerritt/loan_co_example</a></p>
+<p>The important parts are that you're going to get the 'pg' gem in your Gemfile right away.  That takes care of the adapter you need to talk to PostgreSQL.</p>
+<p>Here is a part of the brain dump that I want to mention:</p>
+<p>If you're going to use Devise for authentication, ALWAYS create the User model first.  I think their documentation and stuff I've seen on the web leads people to believe that if you run :</p>
+
+{% highlight ruby %}
+  rails g devise User
+{% endhighlight %}
+
+<p>That it's going to create the User model for you and associated migrations.  But it doesn't.</p>
+<p>So your order of operations should be:</p>
+
+{% highlight ruby %}
+  rails g scaffold User first_name:string last_name:string <etc>
+  rails g devise:install
+  rails g devise User
+{% endhighlight %}
+
+<p>Do NOT declare the email attribute or password on your User model - that's some of the stuff that devise does for you.  And if you declare it, you're going to get a problem when you run your migration because it'll tell you email already exists:</p>
+
+{% highlight ruby %}
+  == 20150210225259 AddDeviseToUsers: migrating =================================
+  -- change_table(:users)
+  rake aborted!
+  StandardError: An error has occurred, this and all later migrations canceled:
+
+  PG::DuplicateColumn: ERROR:  column "email" of relation "users" already exists
+{% endhighlight %}
+
+<p>See?  Learned the hard way.</p>
+<p>The other thing that I didn't understand was how the migration didn't create the foreign keys for me automatically.</p>
+<p>If you use stuff like:</p>
+
+{% highlight ruby %}
+  class User < ActiveRecord::Base
+    has_many :posts
+    has_one  :avatar
+  end
+{% endhighlight %}
+
+<p>Or whatever your relationships are, you expect the Post table to have a user_id column that magically performs the association for you such that you can call:</p>
+
+{% highlight ruby %}
+  user = User.find(params[:id])
+  user.posts.first
+{% endhighlight %}
+
+<p>Or something like that.</p>
+<p>I can't recall actually creating this migration with MySQL, but maybe I did a long time ago in some apps.  With MongoDB you don't have to create the migration (because there aren't migrations) so I guess I'm just fuzzy on this particular act of manually creating the foreign keys.</p>
+<p>I had to write a subsequent migration that changed each table and added the key columns that I wanted.</p>
+
+{% highlight ruby %}
+class AddFeeIdToLoan < ActiveRecord::Migration
+  def change
+    add_column :loans, :fee_id, :integer
+    add_column :loans, :user_id, :integer
+    add_index  :loans, :user_id
+    add_index  :loans, :fee_id
+  end
+end
+{% endhighlight %}
+
+<p>Then you can rake db:migrate to your heart's content and it will all be setup for you.</p>
+<p>When you start your application you're going to be told some stuff isn't right.  Follow the warning messages and fix the problems (not going to document each one).</p>
+<p>Mostly they have to do with config options either missing from one of the environment files, or stuff is deprecated and you need to change the wording.</p>
+<p>One big thing when I went to deploy on Heroku was that WEBrick wouldn't start (I was just messing around with some example stuff - didn't need a real web server, Procfile, etc.)</p>
+<p>Turns out that despite it being a BRAND NEW Rails app - the bin directory was missing.  Do this:</p>
+{% highlight ruby %}
+  rake rails:update:bin
+{% endhighlight %}
+
+<p>That's going to create some pretty important stuff that Heroku needs.  It would be nice if Heroku could tell you about this - I had to Google the answer and fix it that way.</p>
+<p>By this point you should be developing.  You should be able to create your Heroku app, push, and it should work, with the free PostgreSQL addon that Heroku provides backing up the data!</p>

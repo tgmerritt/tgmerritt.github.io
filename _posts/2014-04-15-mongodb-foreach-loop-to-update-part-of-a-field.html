@@ -1,0 +1,27 @@
+---
+layout: post
+title: mongoDB forEach loop to update part of a field
+date: 2014-04-15 19:46:23.000000000 -05:00
+categories: []
+tags: []
+status: publish
+type: post
+published: true
+excerpt: !ruby/object:Hpricot::Doc
+  options: {}
+---
+<p>A mouthful of a title - probably could be more concise - like this forEach loop:</p>
+<p><span style="color:#008000;">db.customers.find().forEach( function(myDoc) { if(myDoc.municipality != null) { db.customers.update({_id:myDoc._id}, { $set: { municipality:myDoc.municipality.replace(new RegExp("\\bcounty\\b", "gi"), "").trim() } }, false, true ) } } )</span></p>
+<p>First let me explain the problem we needed to solve at <a href="http://www.fieldharmony.com">Field Harmony</a>:</p>
+<p>We pull information from an online API that matches against the postal code, county, and city where a customer is located.  The conflict is in the county.  Google Places gives county information back to us as "XYZ COUNTY" whereas the API we are using denotes county in a hash like "county : XYZ".  At first, before I noticed this small discrepancy, we were matching essentially like "if Google Places API COUNTY == API COUNTY do STUFF end" and we weren't hitting this block because the strings didn't match exactly.</p>
+<p>We can't change the APIs of course, but we can normalize the data in our database.</p>
+<p>We had two issues, the first is to make sure that no future data gets into the database with the word "county" tacked on the end.  This was a simple problem where JavaScript's <a href="http://www.w3schools.com/jsref/jsref_replace.asp">.replace()</a> function came in handy.  From working through that function, I had also built up the basics of the Regular Expression that would be useful in a direct mongoDB command to loop through all existing documents and update a particular field based on the RegExp.</p>
+<p>So let me break down the full command above into it's parts:</p>
+<p><strong>db.customers.find()</strong> - grabs ALL the documents in the customers collection</p>
+<p><strong>.forEach(myDoc)</strong> - for each document grabbed from the preceding statement, do stuff.  myDoc becomes the individual document through each iteration of the loop.</p>
+<p><strong>if (myDoc.municipality != null)</strong> - turns out that some of our documents were created before we were ever grabbing the county information for customers.  So we have some historical baggage here.  Making sure they're all up-to-date with a county is a project for another day, so for now let's just update the ones that DO have a county value set.</p>
+<p><strong>db.customers.update({_id:myDoc._id}</strong> - For each document in our loop, we need to update that document and use mongoDB's $set operator in order to update a single field to strip off the word county.  Even though we're looping through a bunch of documents, we have to "find" that document once again because mongo's .update() function requires it.  No worries, we'll use the BSON of the working myDoc (the _id) to find this document and then we can update.</p>
+<p><strong>{$set : { </strong><span style="color:#000000;"><strong>municipality:myDoc.municipality.replace(new RegExp("\\bcounty\\b", "gi"), "").trim() }</strong> - Here is the real WIN of this command.  Because mongo allows us to use JavaScript we can paste in the exact same RegExp that I used in my JavaScript for the site right into the CLI.  We are setting the 'municipality' key to the value on the right-hand side.  And that value is the existing myDoc.municipality value where we are replacing the word 'county', regardless of case (upper / lower) with nothing (as evidenced by the empty "" symbols).  Then, just for good measure I'm going to call .trim() to strip off the leading and trailing whitespace.  Because whitespace sucks.  Now there are dozens of ways to write the same command, and I've worked for years side-by-side with folks who really enjoy the competition of "Golf" in programming.  I like it as well, finding new, better, shorter ways to write code is fun and like Level 12 crossword puzzles for talented developers.  BUT - there's also something to be said for "just make this work and move on to the next ticket because these bills aren't going to pay themselves."  In this case, I went for getting it done.</span></p>
+<p><strong>false</strong> - An <a href="http://docs.mongodb.org/manual/reference/method/db.collection.update/#db.collection.update">optional command for upsert</a> which will create a new document if a match isn't found.  We don't need this so we set false.</p>
+<p><strong>true</strong> - Mongo's .update() function has a parameter 'multi' that must be set to true in order to execute the update against multiple documents.  Default functionality is update a single document.</p>
+<p>There you have it - using Mongo to update every document in a collection using a regular expression to determine what the value should be dynamically.</p>

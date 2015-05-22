@@ -1,0 +1,41 @@
+---
+layout: post
+title: Rendering PDFs as strings with WickedPDF gem
+date: 2014-02-15 00:13:07.000000000 -06:00
+categories: []
+tags: []
+status: publish
+type: post
+published: true
+excerpt: !ruby/object:Hpricot::Doc
+  options: {}
+---
+<p>Today while hacking away on <a href="http://www.fieldharmony.com">fieldharmony</a> I realized that I needed a better way to generate PDF invoices for customers and send those PDFs as attachments via email.</p>
+<p>But I wanted to do this using worker dynos on Heroku because generating a PDF takes a long time and sending it can take even longer.</p>
+<p><a href="https://github.com/mileszs/wicked_pdf">WickedPDF</a> is a well-known gem, and I'm making use of it.</p>
+<p>What I couldn't figure out from the documentation for the longest time was how to render a PDF without displaying it.  There is some documentation on the github site, but it just wasn't clear or well-written in my opinion.</p>
+<p>The final solution is right here (in case you're just looking for a quick answer!)</p>
+<p><code>html = File.read(Rails.root.join('app','views','tech','invoice.html.erb'))<br />
+html = ERB.new(html).result(binding)<br />
+html = html.gsub!(//,'') # There is a null byte in the rendered html, so we'll strip it out (this is kind of a hack)<br />
+# Render the PDF - we're on a worker dyno and have no access to the pdf we rendered already on the web dyno<br />
+@pdf = WickedPdf.new.pdf_from_string(<br />
+html,<br />
+:handlers =&gt; [:erb],<br />
+:footer =&gt; {<br />
+:center =&gt; "Copyright 2014 Field Harmony"<br />
+},<br />
+:disable_smart_shrinking =&gt; true,<br />
+)<br />
+@pdf = @pdf.gsub!(//,'')<br />
+</code></p>
+<p>Let me break this down into the sum of it's parts -</p>
+<p>For WickedPdf.new.pdf_from_string to work, we need to give it a string.  Some people will say "use render_to_string" instead of the extra steps that I was using with the ERB lines, but render_to_string was throwing massive errors that I didn't feel like debugging.</p>
+<p>Because our template is beautifully laid out with HTML &amp; CSS formatting, we need to preserve this, AND we need to change our Rails variables into actual values (because each invoice is different), so we use ERB.new(html).result(binding) to tell Rails to go render the html file, but fire off all the ERB handler stuff in there before spitting out the result.</p>
+<p>Very happy with this - we now have a string.</p>
+<p>Whoops!  Rails is telling me in the log that I have some null bytes (one or more I don't know).  You can a) go debug your template and find where these values are being created and get rid of them, or b) just gsub that stuff out.</p>
+<p>We choose b.</p>
+<p>The WickedPdf.new.pdf_from_string works great now that we can pass it a string of properly formatted html-goodness to make beautiful.</p>
+<p>But oh crap - our null values are back.</p>
+<p>It's ok - gsub that stuff out again and we're done.</p>
+<p>This is what I had to do in order to get HTML formatting with CSS and ERB syntax rendered to a PDF without displaying the file and immediately attaching it to an email.  Whew - what a mouthful.</p>

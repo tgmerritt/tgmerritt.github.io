@@ -1,0 +1,16 @@
+---
+layout: post
+title: Yet another MongoDB one-liner!
+date: 2014-07-31 05:17:28.000000000 -05:00
+categories: []
+tags: []
+status: publish
+type: post
+published: true
+excerpt: !ruby/object:Hpricot::Doc
+  options: {}
+---
+<p><code>db.jobs.find({ "merchant_id" : { $exists: false },  }).forEach( function(myDoc) { cid = db.customers.findOne({"_id": myDoc.customer_id}); myDoc.merchant_id = cid.merchant_id; db.jobs.save(myDoc) } )</code></p>
+<p>I'm feeling good about these one-liners - really easy to work with batch updating in MongoDB!</p>
+<p>Somehow we lost the merchant_id field for a number of documents - 101 to be exact - and I wanted to update these documents by relying on a similar field in a related document from a different collection.</p>
+<p>Easy-as with Mongo</p>

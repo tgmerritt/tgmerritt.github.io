@@ -1,0 +1,69 @@
+---
+layout: post
+title: Benchmarking if &&, if ! blank? and unless blank?
+date: 2014-08-01 20:25:52.000000000 -05:00
+categories: []
+tags: []
+status: publish
+type: post
+published: true
+excerpt: !ruby/object:Hpricot::Doc
+  options: {}
+---
+I like the readability of:
+
+{% highlight ruby %}
+if !params[:foo].blank?
+  stuff
+end
+{% endhighlight %}
+
+Or just:
+
+{% highlight ruby %}
+  stuff if !params[:foo].blank?
+{% endhighlight %}
+
+But I didn't know if I was giving myself any performance gain in writing it this way.  Finally I took the time to Benchmark it using the following:
+
+{% highlight ruby %}
+    iterations = 1_000_000
+    Benchmark.bm do |bm|
+      # using if &&
+      bm.report do
+        iterations.times do
+          if params[:event_type] && params[:event_type] != ''
+            with['event_type'] = params[:event_type].to_i
+          end
+        end
+      end
+
+      # using !blank?
+      bm.report do
+        iterations.times do
+          if !params[:event_type].blank?
+            with['event_type'] = params[:event_type].to_i
+          end
+        end
+      end
+      # using unless blank?
+      bm.report do
+        iterations.times do
+          unless params[:event_type].blank?
+            with['event_type'] = params[:event_type].to_i
+          end
+        end
+      end
+    end
+{% endhighlight %}
+
+And the results are:
+
+{% highlight ruby %}
+       user     system      total        real
+   3.190000   0.010000   3.200000 (  3.215461)
+   3.460000   0.010000   3.470000 (  3.481160)
+   3.490000   0.010000   3.500000 (  3.509005)
+{% endhighlight %}
+
+The least ruby-like method of writing this turns out to be the fastest...

@@ -1,0 +1,26 @@
+---
+layout: post
+title: Another MongoDB multi-document update example
+date: 2014-06-04 23:28:40.000000000 -05:00
+categories: []
+tags:
+- javascript
+- mongodb
+- nosql
+- rails
+- ruby
+status: publish
+type: post
+published: true
+excerpt: !ruby/object:Hpricot::Doc
+  options: {}
+---
+{% highlight ruby %}
+db.jobs.find().forEach( function(myDoc) { if(typeof myDoc.admin_id == 'string' && myDoc.admin_id.length == 24 ) { myDoc.admin_id = new ObjectId(myDoc.admin_id); db.jobs.save(myDoc); } } )
+{% endhighlight %}
+<p>This command will fetch every document from the database, loop through each document and update the 'admin_id' field (in my case) from a String to an ObjectId</p>
+<p>When I first started using Mongo - I hadn't read the best practices of keeping primary keys and "foreign keys" (for lack of a better description - associative keys in other words for relationships created through an ORM) as ObjectId type.  I made them Strings because I thought it would be easier to deal with.</p>
+<p>Live and learn.</p>
+<p>A 24 character String is 24 bytes.  An ObjectId at 24 characters is only 12 bytes.  You're doubling your bits on the wire with String vs ObjectId.  That's a lot of overhead if you're talking millions of documents.  Even in the thousands range you're starting to really feel the pain of that extra overhead.  A customer might not - but you as a DBA will definitely recognize how grossly inefficient such queries are.  </p>
+<p>There are other advantages - but suffice it to say - if you're using a field in a certain document as a key (as would be the case with MongoID and MongoMapper when you add associations like belongs_to or many) you should be using ObjectId (and they will automatically when you use the associations).  If, like me, you manually setup those relationships at some point - much like you would manually with a foreign key field in a regular SQL-like DB - you should avoid String.  If you didn't - use the command above (adapted to your schema) to update all the documents.</p>
+<p>A HUGE database would take a while to get through!  Make sure you're not updating millions of records during production hours!!!</p>

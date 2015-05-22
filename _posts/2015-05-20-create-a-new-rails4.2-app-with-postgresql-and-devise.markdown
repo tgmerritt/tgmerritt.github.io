@@ -35,7 +35,7 @@ T$ rvm gemset list
 gemsets for ruby-2.1.5 (found in /Users/Tyler/.rvm/gems/ruby-2.1.5)
    (default)
    global
-=&gt; rails42
+=> rails42
 
 {% endhighlight %}
 
@@ -134,7 +134,7 @@ I can't recall actually creating this migration with MySQL, but maybe I did a lo
 I had to write a subsequent migration that changed each table and added the key columns that I wanted.
 
 {% highlight ruby %}
-class AddFeeIdToLoan &lt; ActiveRecord::Migration
+class AddFeeIdToLoan < ActiveRecord::Migration
   def change
     add_column :loans, :fee_id, :integer
     add_column :loans, :user_id, :integer
