@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Nokogiri and XML"
-date:   2014-01-18 12:13:43
+date:   2014-01-20 12:13:43
 categories: jekyll update
 ---
 
